@@ -1,16 +1,15 @@
-import os
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
-
-ROOT = 'data'
-CLASS_NAME = sorted(list(os.listdir(f'{ROOT}/train')))
-                                      
+from cfg import Image, np , os, plt,mpimg
+                                    
 def read_image_from_path(path, size):
     im = Image.open(path).convert('RGB').resize(size)
     return np.array(im)
 
 def folder_to_images(folder, size):
+    """
+        Return all of Image's information:
+        * image's path: numpy array
+        * image data: numpy array shape (num image, h, w, 3)
+    """
     list_dir = [folder + '/'+ name for name in os.listdir(folder)]
     images_np = np.zeros(shape=(len(list_dir), *size, 3))
     images_path = []
@@ -21,9 +20,6 @@ def folder_to_images(folder, size):
     images_path = np.array(images_path)
     return images_np, images_path
 
-
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 
 def plot_results(query_path, results, reverse=False):
     """
@@ -40,8 +36,8 @@ def plot_results(query_path, results, reverse=False):
     n_results = len(results)
     
     # Define the number of rows and columns based on the number of images
-    n_cols = 5  # Set the maximum number of columns
-    n_rows = 1 + (n_results // n_cols)  # +1 for the query image
+    n_cols = 5                                          # Set the maximum number of columns
+    n_rows = 1 + (n_results // n_cols)                  # +1 for the query image
 
     _, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 3, n_rows * 3))
     
@@ -60,7 +56,6 @@ def plot_results(query_path, results, reverse=False):
         axes[row, col].axis('off')
         axes[row, col].set_title(f"Top {i + 1}: {label}")
     
-    # Hide any remaining empty subplots
     for i in range(n_results + 1, n_rows * n_cols):
         row = i // n_cols
         col = i % n_cols

@@ -1,5 +1,8 @@
-from cfg import CLASS_NAME, ROOT, COLLECTION_PATH, root_img_path
-from cfg import os ,tqdm, np, Image, chromadb, json
+import sys
+sys.path.append('./core/')
+
+from cfg import COLLECTION_PATH, root_img_path
+from cfg import os ,tqdm, np, Image, json
 from cfg import embedding_function
 from cfg import HNSW_SPACE
 from utilies import get_files_path
@@ -27,7 +30,7 @@ def add_embedding(files_path):
 
     return embeddings,ids, mapping_paths
 
-def __save_collection(ids, embeddings,mapping_paths, save_path):
+def __save_collection(embeddings,ids, mapping_paths, save_path):
     print('start saving ')
     """
         Save collection
@@ -79,14 +82,14 @@ def load_collection(client,collection_name,metadata,load_path):
     # Add the embeddings and ids back to the collection
     collection.add(
         embeddings=embeddings.tolist(), 
-        ids=ids)
+        ids = ids)
 
     return collection, mapping
 
 def main():
     print('>>>>>>>>>>>>>>>>>>>  Save ...')
     
-    embeddings,ids, mapping_paths = add_embedding(files_path)
+    embeddings, ids, mapping_paths = add_embedding(files_path)
     __save_collection(embeddings,ids, mapping_paths, os.path.join(COLLECTION_PATH))
     
     print('>>>>>>>>>>>>>>>>>>> Finished ...')

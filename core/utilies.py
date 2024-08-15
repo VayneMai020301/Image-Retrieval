@@ -1,3 +1,5 @@
+import sys
+sys.path.append('./core/')
 from cfg import Image, np , os, plt,mpimg, CLASS_NAME
    
 def get_files_path(path):
@@ -75,7 +77,7 @@ def plot_results(query_path, results, reverse=False):
     plt.tight_layout()
     plt.show()
     
-def plot_results(query_path, mapping_paths, results):
+def plot_chromadb_results(query_path, mapping_paths, results):
     """
         Plot query image and results
     """

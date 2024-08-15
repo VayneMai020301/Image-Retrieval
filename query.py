@@ -1,14 +1,19 @@
 
-from core.cfg import np, os, Image, argparse, chromadb
+from core.cfg import np, os, Image, argparse, chromadb, plt
 from core.cfg import embedding_function
 from core.database import load_collection
-from core.cfg import COLLECTION_PATH
+from core.cfg import COLLECTION_PATH, root_img_path
+from core.utilies import get_files_path,plot_chromadb_results
 
 __doc__=[
-
     "query image in database with chromadb"
 ]
+files_path = get_files_path(path=root_img_path)    
+    
 def __get_single_image_embedding(image : np.ndarray):
+    """
+        * Return feature of query image
+    """
     embedding = embedding_function._encode_image(image=image)
     return np.array(embedding)
 
@@ -20,7 +25,6 @@ def __search(image_path, collection, n_results):
             n_results=n_results 
     )
     return results
-
 
 def main():
     parser = argparse.ArgumentParser(description="Choose options")
@@ -44,16 +48,15 @@ def main():
     test_path = args.path
     client = chromadb.Client()
     if args.m == 'l2':
-        l2_collection = load_collection(client,COLLECTION_PATH,'l2_collection')
+        l2_collection = load_collection(client,'l2_collection','l2', COLLECTION_PATH)
         results = __search(image_path=test_path, collection = l2_collection, n_results=args.top)
 
     elif args.m == 'cosine':
-        cosine_collection = load_collection(client,COLLECTION_PATH,'cosine_collection')
+        cosine_collection = load_collection(client,'cosine_collection','cosine', COLLECTION_PATH)
         results = __search(image_path=test_path, collection = cosine_collection, n_results=args.top)
 
     
-    print(results)
-     
+    plot_chromadb_results(image_path=test_path, files_path = files_path, results = results)
 if __name__ == "__main__":
     main()
     

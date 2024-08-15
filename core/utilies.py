@@ -1,4 +1,15 @@
-from cfg import Image, np , os, plt,mpimg
+from cfg import Image, np , os, plt,mpimg, CLASS_NAME
+   
+def get_files_path(path):
+    files_path = []
+    for label in CLASS_NAME:
+        label_path = path + "/" + label
+        filenames = os.listdir(label_path)
+        for filename in filenames:
+            filepath = label_path + '/' + filename
+            files_path.append(filepath)
+    return files_path
+   
                                     
 def read_image_from_path(path, size):
     im = Image.open(path).convert('RGB').resize(size)
@@ -62,4 +73,33 @@ def plot_results(query_path, results, reverse=False):
         axes[row, col].axis('off')
     
     plt.tight_layout()
+    plt.show()
+    
+def plot_results(query_path, mapping_paths, results):
+    """
+        Plot query image and results
+    """
+    query_image = Image.open(query_path)
+    
+    mapping_paths_results = []
+    for id in results['ids'][0]  :
+        mapping_paths_results.append(mapping_paths[id])
+
+    # Calculate number of Columns and number of Rows
+    n_results = len(mapping_paths_results)
+    grid_size = int(np.ceil(np.sqrt(n_results + 1)))  # Adding 1 for query image
+
+    plt.figure(figsize=(grid_size * 5, grid_size * 5))
+    plt.subplot(grid_size, grid_size, 1)
+    plt.imshow(query_image)
+    plt.title("Query Image")
+    plt.axis('off')
+
+    # Results Ploting
+    for i, result_file in enumerate(mapping_paths_results):
+        plt.subplot(grid_size, grid_size, i + 2)
+        result_image = Image.open(result_file)
+        plt.imshow(result_image)
+        plt.title(f"Result {i + 1}")
+        plt.axis('off')
     plt.show()

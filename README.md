@@ -39,12 +39,15 @@ python main.py -m 'coeff' -pretrained 'True'
 python main.py -m 'coeff' -pretrained 'False'   
 ```
 ## 4. How to run with database (chromadb) building
-* Step1: database buidling
+* Step1: extract and save feature
 ```python 
-python ./database.py
+python core/database.py                                                             
 ```
 
-* Step2: 
+* Step2: Building chromadb and query (feature loading -> build chromadb)
+```python
+python ./query.py
+```
 ### Retrieval with raw image features and feature extraction (Using CLIP to extract features from image)
 * In this method, we approach calculate distance of each pair image and give the pair have best of of score
 * Score is distance followed formula below

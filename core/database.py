@@ -1,27 +1,21 @@
-from cfg import CLASS_NAME, ROOT, COLLECTION_PATH
+from cfg import CLASS_NAME, ROOT, COLLECTION_PATH, root_img_path
 from cfg import os ,tqdm, np, Image, chromadb, json
 from cfg import embedding_function
+from cfg import HNSW_SPACE
+from utilies import get_files_path
 
-def get_files_path(path):
-    files_path = []
-    for label in CLASS_NAME:
-        label_path = path + "/" + label
-        filenames = os.listdir(label_path)
-        for filename in filenames:
-            filepath = label_path + '/' + filename
-            files_path.append(filepath)
-    return files_path
 
-data_path = f'{ROOT}/train'
-files_path = get_files_path(path=data_path)
+files_path = get_files_path(path=root_img_path)
 
 def get_single_image_embedding(image : np.ndarray):
     embedding = embedding_function._encode_image(image=image)
     return np.array(embedding)
 
-def add_embedding(collection, files_path):
+def add_embedding(files_path):
     ids = []
     embeddings = []
+    mapping_paths = {}
+    
     for id_filepath, filepath in tqdm(enumerate(files_path)):
         ids.append(f'id_{id_filepath}')
         image = Image.open(filepath)
@@ -29,19 +23,11 @@ def add_embedding(collection, files_path):
         image = np.array(image)
         embedding = get_single_image_embedding(image=image)
         embeddings.append(embedding.tolist())
+        mapping_paths[f'id_{id_filepath}'] = filepath
 
-    try:    
-        collection.add(
-            embeddings = embeddings,
-            ids = ids
-        )
-    except Exception as e:
-        print(e)
+    return embeddings,ids, mapping_paths
 
-    __save_collection(collection, os.path.join(COLLECTION_PATH,"l2"))
-    return collection
-
-def __save_collection(collection, save_path):
+def __save_collection(ids, embeddings,mapping_paths, save_path):
     print('start saving ')
     """
         Save collection
@@ -52,70 +38,58 @@ def __save_collection(collection, save_path):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    metadata_path = os.path.join(save_path, 'metadata.json')
-    with open(metadata_path, 'w') as metadata_file:
-        json.dump(collection.metadata, metadata_file)
-
-    embeddings, ids = collection.get_all_embeddings_and_ids()
     embeddings_path = os.path.join(save_path, 'embeddings.npy')
     np.save(embeddings_path, embeddings)
+
     ids_path = os.path.join(save_path, 'ids.json')
     with open(ids_path, 'w') as ids_file:
         json.dump(ids, ids_file)
 
-def load_collection(client, save_path, collection_name):
+    files_path = os.path.join(save_path, 'mapping_paths.json')
+    with open(files_path, 'w') as path_file:
+        json.dump(mapping_paths, path_file)
+
+def load_collection(client,collection_name,metadata,load_path):
     """
         Collection loading: Return Collection
-        * load collection
-        * load features embeddings
-        * idss
+        * Collection Building
+        * Features embeddings loading
+        * ids loading
+        * mapping_paths loading
     """
     
-    metadata_path = os.path.join(save_path, 'metadata.json')
-    with open(metadata_path, 'r') as metadata_file:
-        metadata = json.load(metadata_file)
-
-    # Create the collection with the loaded metadata
-    collection = client.get_or_create_collection(
-        name=collection_name,
-        metadata=metadata
-    )
-
-    # Load the embeddings and ids
-    embeddings_path = os.path.join(save_path, 'embeddings.npy')
-    embeddings = np.load(embeddings_path)
-    ids_path = os.path.join(save_path, 'ids.json')
+    # Load the ids from the .json file
+    ids_path = os.path.join(load_path, 'ids.json')
     with open(ids_path, 'r') as ids_file:
         ids = json.load(ids_file)
 
-    # Add the embeddings back to the collection
+    # Load the paths from the .json file
+    mapping_paths = os.path.join(load_path, 'mapping_paths.json')
+    with open(mapping_paths, 'r') as paths_file:
+        mapping = json.load(paths_file)
+
+    # Load the embeddings from the .npy file
+    embeddings_path = os.path.join(load_path, 'embeddings.npy')
+    embeddings = np.load(embeddings_path, allow_pickle=True)
+
+    # Get or create the collection in ChromaDB
+    #collection = client.get_or_create_collection(name=collection_name)
+    collection = client.get_or_create_collection( name = collection_name,
+                                                        metadata={HNSW_SPACE: metadata})
+    # Add the embeddings and ids back to the collection
     collection.add(
-        embeddings=embeddings, 
+        embeddings=embeddings.tolist(), 
         ids=ids)
 
-    return collection
+    return collection, mapping
 
 def main():
-    print('>>>>>>>>>>>>>>>>>>> Start Add Embedding ...')
-    HNSW_SPACE = "hnsw:space"
-    chroma_client = chromadb.Client()
-    l2_collection = chroma_client.get_or_create_collection(
-        name="l2_collection",
-        metadata={"hnsw:space": "l2"} 
-    )
-    print('>>>>>>>>>>>>>>>>>>> Start Add l2_collection Embedding ...')
-    collection = add_embedding(l2_collection, files_path)
-    __save_collection(collection, os.path.join(COLLECTION_PATH,"l2"))
-
-    cosine_collection = chroma_client.get_or_create_collection(
-        name="cosine_collection",
-        metadata={HNSW_SPACE: "cosine"})
+    print('>>>>>>>>>>>>>>>>>>>  Save ...')
     
-    print('>>>>>>>>>>>>>>>>>>> Start Add cosine_collection Embedding ...')
-    cosine_collection = add_embedding(cosine_collection, files_path)
-    __save_collection(cosine_collection, os.path.join(COLLECTION_PATH,"cosine"))
+    embeddings,ids, mapping_paths = add_embedding(files_path)
+    __save_collection(embeddings,ids, mapping_paths, os.path.join(COLLECTION_PATH))
     
-    print('>>>>>>>>>>>>>>>>> Completed saving collection ...')
+    print('>>>>>>>>>>>>>>>>>>> Finished ...')
 
 if __name__ == "__main__":
     main() 
